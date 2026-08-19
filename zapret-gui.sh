@@ -515,7 +515,7 @@ Do_Blockcheck_Ev() {
 		echo "time: $(date)"
 		echo
 		cd "$ZAPRET_DIR" || exit 1
-		if command -v timeout >/dev/null 2>&1; then
+		if timeout --version >/dev/null 2>&1; then
 			DOMAINS="$dom" BATCH=1 CURL_MAX_TIME=5 timeout 180 sh ./blockcheck.sh
 		else
 			DOMAINS="$dom" BATCH=1 CURL_MAX_TIME=5 sh ./blockcheck.sh
@@ -557,7 +557,7 @@ Do_Install() {  # best effort helper; run blockcheck afterwards to pick a strate
 	echo "zapret install started - $(date)" > /tmp/zapret_restart.log
 	{
 		if [ -x "$ZAPRET_INIT" ]; then echo "already installed."; else
-			command -v git >/dev/null 2>&1 && git clone --depth 1 "$url" "$ZAPRET_DIR"
+			git --version >/dev/null 2>&1 && git clone --depth 1 "$url" "$ZAPRET_DIR"
 			[ -x "${ZAPRET_DIR}/install_bin.sh" ] && sh "${ZAPRET_DIR}/install_bin.sh"
 		fi
 		Ensure_Default_Lists

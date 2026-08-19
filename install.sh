@@ -12,7 +12,7 @@ echo "==> zapret-gui installer"
 # sanity checks
 [ -f /usr/sbin/helper.sh ] || { echo "ERROR: this is not AsusWRT-Merlin (no helper.sh)"; exit 1; }
 [ -x /opt/zapret/init.d/sysv/zapret ] || echo "WARN: zapret not found at /opt/zapret (you can still install the GUI and use its 'Install' button)"
-command -v curl >/dev/null 2>&1 || { echo "ERROR: curl not found (install Entware / 'opkg install curl')"; exit 1; }
+curl --version >/dev/null 2>&1 || { echo "ERROR: curl not found (install Entware / 'opkg install curl')"; exit 1; }
 [ "$(nvram get jffs2_scripts)" = "1" ] || echo "WARN: enable 'Administration -> System -> Enable JFFS custom scripts and configs' for boot persistence"
 
 mkdir -p "$DIR"
