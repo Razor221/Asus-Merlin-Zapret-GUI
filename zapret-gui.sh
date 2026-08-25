@@ -632,6 +632,7 @@ Install() {
 	
 	# Add cron job to update UI stats (like qcount) at 12:00 AM and 12:00 PM and persist it via services-start
 	Add_Hook "$SS" "cru a ${ADDON}-cron \"0 0,12 * * * ${ADDON_DIR}/${ADDON}.sh status\" ${TAG}"
+	cru a "${ADDON}-cron" "0 0,12 * * * ${ADDON_DIR}/${ADDON}.sh status"
 
 	chmod 0755 "${ADDON_DIR}/${ADDON}.sh"; Mount_UI; echo "installed"
 }
