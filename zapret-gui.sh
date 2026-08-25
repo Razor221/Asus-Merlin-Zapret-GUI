@@ -629,11 +629,20 @@ Install() {
 	Add_Hook "$SS"  "[ -x ${ADDON_DIR}/${ADDON}.sh ] && ${ADDON_DIR}/${ADDON}.sh mount & ${TAG}"
 	Add_Hook "$SEE" "[ -x ${ADDON_DIR}/${ADDON}.sh ] && ${ADDON_DIR}/${ADDON}.sh event \"\$@\" & ${TAG}"
 	Add_Hook "$SS"  "[ -x ${ADDON_DIR}/${ADDON}.sh ] && ${ADDON_DIR}/${ADDON}.sh scheduler >/dev/null 2>&1 & ${TAG}-scheduler"
+	
+	# Add cron job to update UI stats (like qcount) at 12:00 AM and 12:00 PM
+	Add_Hook "$SS" "cru a ${ADDON}-cron \"0 0,12 * * * ${ADDON_DIR}/${ADDON}.sh status\" ${TAG}"
+	cru a "${ADDON}-cron" "0 0,12 * * * ${ADDON_DIR}/${ADDON}.sh status"
+
 	chmod 0755 "${ADDON_DIR}/${ADDON}.sh"; Mount_UI; echo "installed"
 }
 Uninstall() {
 	Unmount_UI
 	sed -i "\\~${TAG}~d" "$SS"  2>/dev/null; sed -i "\\~${TAG}~d" "$SE" 2>/dev/null; sed -i "\\~${TAG}~d" "$SEE" 2>/dev/null
+	
+	# Remove the cron job from the active schedule
+	cru d "${ADDON}-cron" 2>/dev/null
+	
 	am_settings_set zapretgui_page ""; echo "uninstalled"
 }
 
