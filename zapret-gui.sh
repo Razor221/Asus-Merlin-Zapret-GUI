@@ -12,7 +12,7 @@
 #   reassembles + applies them. It is the only reliable web->backend channel
 #   on such firmware.
 #
-#   Repo: https://github.com/Jarvis322/Asus-Merlin-Zapret-GUI
+#   Repo: https://github.com/Razor221/Asus-Merlin-Zapret-GUI
 #   License: MIT
 ##############################################################################
 ADDON="zapret-gui"
