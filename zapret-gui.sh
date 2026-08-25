@@ -566,7 +566,7 @@ Do_Install() {  # best effort helper; run blockcheck afterwards to pick a strate
 	Gen_Status
 }
 Do_Update() {
-	local repo="https://raw.githubusercontent.com/Jarvis322/Asus-Merlin-Zapret-GUI/main" ts
+	local repo="https://raw.githubusercontent.com/Razor221/Asus-Merlin-Zapret-GUI/main" ts
 	# Same-directory dotfile temps, not /tmp: /tmp is tmpfs and /jffs (where
 	# this addon lives) is a separate ubifs filesystem - a cross-filesystem
 	# mv is copy+unlink, not atomic, so a crash mid-copy could leave a
