@@ -4,7 +4,7 @@
 # Run over SSH:
 #   curl -fsSL https://raw.githubusercontent.com/Jarvis322/Asus-Merlin-Zapret-GUI/main/install.sh | sh
 ##############################################################################
-REPO="https://raw.githubusercontent.com/Jarvis322/Asus-Merlin-Zapret-GUI/main"
+REPO="https://raw.githubusercontent.com/Razor221/Asus-Merlin-Zapret-GUI/main"
 DIR="/jffs/addons/zapret-gui"
 
 echo "==> zapret-gui installer"
