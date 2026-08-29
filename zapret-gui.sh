@@ -565,6 +565,16 @@ Do_Install() {  # best effort helper; run blockcheck afterwards to pick a strate
 	} >> /tmp/zapret_restart.log 2>&1 &
 	Gen_Status
 }
+Do_BinUpdate() {
+	echo "zapret binary update started - $(date)" > /tmp/zapret_restart.log
+	if [ -x "/opt/zapret_updater.sh" ]; then
+		# Run your updater script in the background and pipe output to the Web UI log
+		/opt/zapret_updater.sh >> /tmp/zapret_restart.log 2>&1 &
+	else
+		echo "Error: /opt/zapret_updater.sh not found or not executable." >> /tmp/zapret_restart.log
+	fi
+	Gen_Status
+}
 Do_Update() {
 	local repo="https://raw.githubusercontent.com/Razor221/Asus-Merlin-Zapret-GUI/main" ts
 	# Same-directory dotfile temps, not /tmp: /tmp is tmpfs and /jffs (where
@@ -684,6 +694,7 @@ Handle_Event() {
 		"restart zs"*)  Schedule_Save_Event "${ev#restart zs}" ;;
 		"restart_zs"*)  Schedule_Save_Event "${ev#restart_zs}" ;;
 		*zgbc*)          Do_Blockcheck_Ev "${ev#*zgbc}" ;;
+		*zapretbinupdate*) Do_BinUpdate ;;
 		*zapretinstall*) Do_Install ;;
 		*zapretrestart*) Do_Restart ;;
 		*zapreton*)      Do_Enable ;;
