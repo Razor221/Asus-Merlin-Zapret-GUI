@@ -143,7 +143,7 @@ function post_action(script,wait,reloadMs){
 	if(reloadMs) setTimeout(function(){ location.reload(); }, reloadMs);
 }
 function do_action(act){
-	var m=(act=='zapretoff')?'zapret KAPATILSIN mı?':(act=='zapreton')?'zapret AÇILSIN mı?':'zapret yeniden başlatılsın mı?';
+	var m=(act=='zapretoff')?'zapret KAPATILSIN mı?':(act=='zapreton')?'zapret AÇILSIN mı?':(act=='zapretbinupdate')?'Çekirdek sürümü güncellensin mi?':'zapret yeniden başlatılsın mı?';
 	if(!confirm(m)) return; post_action('restart_'+act,12,14000);
 }
 function b64url(s){ return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,''); }
@@ -283,6 +283,7 @@ function do_install(){
 <input class="zg-btn" onclick="wizard_test();" type="button" value="Test Et">
 <input class="zg-btn zg-btn-save" onclick="wizard_start();" type="button" value="Başlat">
 <input class="zg-btn" onclick="location.reload();" type="button" value="Yenile">
+<input class="zg-btn zg-btn-save" onclick="do_action('zapretbinupdate');" type="button" value="Güncelle">
 </span>
 </div>
 </div>
