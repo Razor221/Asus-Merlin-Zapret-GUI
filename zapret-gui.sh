@@ -577,57 +577,56 @@ Do_BinUpdate() {
 }
 Do_Update() {
 	local repo="https://raw.githubusercontent.com/Razor221/Asus-Merlin-Zapret-GUI/main" ts
-	# Same-directory dotfile temps, not /tmp: /tmp is tmpfs and /jffs (where
-	# this addon lives) is a separate ubifs filesystem - a cross-filesystem
-	# mv is copy+unlink, not atomic, so a crash mid-copy could leave a
-	# truncated, broken addon script. Downloading directly into the same
-	# directory as the final destination makes the mv below a true
-	# same-filesystem rename (the same guarantee Apply_Event_Cfg's own
-	# "${ZAPRET_CONF}.new" swap already relies on).
+	# Added upd_tmp to handle the updater download atomically on the /opt partition
 	local sh_tmp="${ADDON_DIR}/.${ADDON}.sh.update.$$" asp_tmp="${ADDON_DIR}/.${ADDON}.asp.update.$$"
+	local upd_tmp="/opt/.zapret_updater.sh.update.$$"
 	local cur_sz new_sz fn
 	ts="$(date +%Y%m%d-%H%M%S)"
-	# Not `command -v curl`: this router's /bin/sh doesn't support the
-	# `command` builtin at all (confirmed on-device - it errors with
-	# "sh: command: not found" regardless of whether curl is actually
-	# present), which made this check always fail and silently disabled the
-	# whole self-update feature. Probing execution directly is portable
-	# POSIX and tests the thing that actually matters (can we run curl).
+	
 	curl --version >/dev/null 2>&1 || { logger -t "$ADDON" "GitHub update failed: curl missing"; return 1; }
 
 	if ! curl -fsSL "$repo/zapret-gui.sh"  -o "$sh_tmp"  || \
-	   ! curl -fsSL "$repo/zapret-gui.asp" -o "$asp_tmp"; then
-		logger -t "$ADDON" "GitHub update failed: download error"; rm -f "$sh_tmp" "$asp_tmp"; return 1
+	   ! curl -fsSL "$repo/zapret-gui.asp" -o "$asp_tmp" || \
+	   ! curl -fsSL "$repo/zapret_updater.sh" -o "$upd_tmp"; then
+		logger -t "$ADDON" "GitHub update failed: download error"; rm -f "$sh_tmp" "$asp_tmp" "$upd_tmp"; return 1
 	fi
 
-	sh -n "$sh_tmp" || { logger -t "$ADDON" "GitHub update rejected: shell syntax error"; rm -f "$sh_tmp" "$asp_tmp"; return 1; }
+	sh -n "$sh_tmp" || { logger -t "$ADDON" "GitHub update rejected: shell syntax error"; rm -f "$sh_tmp" "$asp_tmp" "$upd_tmp"; return 1; }
+	sh -n "$upd_tmp" || { logger -t "$ADDON" "GitHub update rejected: updater syntax error"; rm -f "$sh_tmp" "$asp_tmp" "$upd_tmp"; return 1; }
 
-	# `sh -n` only validates whatever bytes actually arrived - it can't catch
-	# a truncated-but-parseable-so-far download that's simply missing later
-	# content. A size-range check plus a must-exist-function check close that
-	# gap without needing an external checksum/signature mechanism.
 	cur_sz="$(wc -c < "${ADDON_DIR}/${ADDON}.sh" 2>/dev/null)"; cur_sz="${cur_sz:-0}"
 	new_sz="$(wc -c < "$sh_tmp" 2>/dev/null)"; new_sz="${new_sz:-0}"
 	if [ "$cur_sz" -gt 0 ] && { [ "$new_sz" -lt $((cur_sz * 6 / 10)) ] || [ "$new_sz" -gt $((cur_sz * 2)) ]; }; then
 		logger -t "$ADDON" "GitHub update rejected: size out of range (cur=$cur_sz new=$new_sz)"
-		rm -f "$sh_tmp" "$asp_tmp"; return 1
+		rm -f "$sh_tmp" "$asp_tmp" "$upd_tmp"; return 1
 	fi
+	
 	for fn in Apply_Event_Cfg Handle_Event Do_Blockcheck_Ev Scheduler Install Uninstall; do
 		grep -q "^${fn}()" "$sh_tmp" || {
 			logger -t "$ADDON" "GitHub update rejected: missing function $fn"
-			rm -f "$sh_tmp" "$asp_tmp"; return 1
+			rm -f "$sh_tmp" "$asp_tmp" "$upd_tmp"; return 1
 		}
 	done
 	{ [ -s "$asp_tmp" ] && grep -q 'f_hosts' "$asp_tmp"; } || {
 		logger -t "$ADDON" "GitHub update rejected: .asp payload looks wrong"
-		rm -f "$sh_tmp" "$asp_tmp"; return 1
+		rm -f "$sh_tmp" "$asp_tmp" "$upd_tmp"; return 1
 	}
 
+	# Backup existing files
 	cp -p "${ADDON_DIR}/${ADDON}.sh" "${ADDON_DIR}/${ADDON}.sh.bak-github-${ts}"
 	cp -p "$ASP_SRC" "${ASP_SRC}.bak-github-${ts}"
-	mv -f "$sh_tmp"  "${ADDON_DIR}/${ADDON}.sh"     # same dir/fs -> atomic rename
-	mv -f "$asp_tmp" "$ASP_SRC"                      # same dir/fs -> atomic rename
-	chmod 0755 "${ADDON_DIR}/${ADDON}.sh"; chmod 0644 "$ASP_SRC"
+	[ -f "/opt/zapret_updater.sh" ] && cp -p "/opt/zapret_updater.sh" "/opt/zapret_updater.sh.bak-github-${ts}"
+	
+	# Atomic swaps
+	mv -f "$sh_tmp"  "${ADDON_DIR}/${ADDON}.sh"
+	mv -f "$asp_tmp" "$ASP_SRC"
+	mv -f "$upd_tmp" "/opt/zapret_updater.sh"
+	
+	# Apply permissions
+	chmod 0755 "${ADDON_DIR}/${ADDON}.sh"
+	chmod 0644 "$ASP_SRC"
+	chmod 0755 "/opt/zapret_updater.sh"
+	
 	Mount_UI
 	logger -t "$ADDON" "updated from GitHub main"
 }
