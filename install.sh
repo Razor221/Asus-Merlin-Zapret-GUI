@@ -2,7 +2,7 @@
 ##############################################################################
 # zapret-gui installer for AsusWRT-Merlin
 # Run over SSH:
-#   curl -fsSL https://raw.githubusercontent.com/Jarvis322/Asus-Merlin-Zapret-GUI/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/Razor221/Asus-Merlin-Zapret-GUI/main/install.sh | sh
 ##############################################################################
 REPO="https://raw.githubusercontent.com/Razor221/Asus-Merlin-Zapret-GUI/main"
 DIR="/jffs/addons/zapret-gui"
@@ -21,6 +21,10 @@ for f in zapret-gui.sh zapret-gui.asp; do
 	curl -fsSL "$REPO/$f" -o "$DIR/$f" || { echo "ERROR: download failed for $f"; exit 1; }
 done
 chmod 0755 "$DIR/zapret-gui.sh"
+
+echo "  downloading zapret_updater.sh ..."
+curl -fsSL "$REPO/zapret_updater.sh" -o "/opt/zapret_updater.sh" || { echo "ERROR: download failed for zapret_updater.sh"; exit 1; }
+chmod 0755 "/opt/zapret_updater.sh"
 
 "$DIR/zapret-gui.sh" install
 
