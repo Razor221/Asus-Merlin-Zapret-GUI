@@ -432,7 +432,6 @@ function do_install(){
 </div>
 </div>
 </div><!-- main_panel -->
-<div class="zg-credit">Developed by <a href="https://x.com/yigitech" target="_blank" rel="noopener">x.com/yigitech</a></div>
 </div><!-- zg-wrap -->
 
 </td></tr></tbody></table>
