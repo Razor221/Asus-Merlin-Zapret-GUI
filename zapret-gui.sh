@@ -268,7 +268,7 @@ Gen_Status() {
 	    -e "s|@@CUSTOM@@|${custom_now}|g" \
 	    -e "s|@@PAGE@@|${page}|g" \
 	    "$ASP_SRC" \
-	| awk -v hl="$HOSTLIST" -v ex="$HOSTLIST_EXCLUDE" '$0=="@@HOSTAREA@@"{print "<textarea id=\"f_hosts\" class=\"zg-hosts\" rows=\"9\" spellcheck=\"false\" oninput=\"upd_hc()\">"; while((getline l < hl)>0){gsub(/&/,"\\&amp;",l); gsub(/</,"\\&lt;",l); gsub(/>/,"\\&gt;",l); print l}; print "</textarea>"; next} $0=="@@EXCLUDEAREA@@"{print "<textarea id=\"f_exclude\" class=\"zg-hosts\" rows=\"5\" spellcheck=\"false\" oninput=\"upd_exc()\">"; while((getline l < ex)>0){gsub(/&/,"\\&amp;",l); gsub(/</,"\\&lt;",l); gsub(/>/,"\\&gt;",l); print l}; print "</textarea>"; next} {print}' \
+	| awk -v hl="$HOSTLIST" -v ex="$HOSTLIST_EXCLUDE" '/^@@HOSTAREA@@/{print "<textarea id=\"f_hosts\" class=\"zg-hosts\" rows=\"9\" spellcheck=\"false\" oninput=\"upd_hc()\">"; while((getline l < hl)>0){gsub(/&/,"\\&amp;",l); gsub(/</,"\\&lt;",l); gsub(/>/,"\\&gt;",l); print l}; print "</textarea>"; next} /^@@EXCLUDEAREA@@/{print "<textarea id=\"f_exclude\" class=\"zg-hosts\" rows=\"5\" spellcheck=\"false\" oninput=\"upd_exc()\">"; while((getline l < ex)>0){gsub(/&/,"\\&amp;",l); gsub(/</,"\\&lt;",l); gsub(/>/,"\\&gt;",l); print l}; print "</textarea>"; next} {print}' \
 	    > "/www/user/${page}"
 }
 
