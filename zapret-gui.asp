@@ -79,6 +79,7 @@ function fill_form(){
 	try{ $id('f_log').textContent=atob(zapret_log_b64||''); }catch(e){}
 	if(zapret_installed!='1'){ $id('install_panel').style.display=''; $id('main_panel').style.display='none'; }
 	upd_hc();
+	upd_exc();
 }
 function profile_store(){
 	try{ return JSON.parse(localStorage.getItem('zapret_gui_profiles')||'{}'); }catch(e){ return {}; }
@@ -89,7 +90,7 @@ function profile_save_store(o){
 function profile_data(){
 	return {enable:$id('f_enable').checked,strat:$id('f_strat').value,ttl:$id('f_ttl').value,
 		ports:$id('f_ports').value,mode:$id('f_mode').value,custom:$id('f_custom').value,
-		hosts:$id('f_hosts').value};
+		hosts:$id('f_hosts').value,exclude:$id('f_exclude').value};
 }
 function refresh_profiles(){
 	var s=$id('f_profile'); if(!s)return;
@@ -109,6 +110,7 @@ function load_profile(){
 	var p=o[n];$id('f_enable').checked=!!p.enable;setSel('f_strat',p.strat);$id('f_ttl').value=p.ttl||2;
 	$id('f_ports').value=p.ports||'80,443';setSel('f_mode',p.mode||'hostlist');$id('f_custom').value=p.custom||'';
 	$id('f_hosts').value=p.hosts||'';upd_hc();
+	$id('f_exclude').value=p.exclude||'';upd_exc();
 }
 function delete_profile(){
 	var n=$id('f_profile').value;if(!n)return;
@@ -116,14 +118,18 @@ function delete_profile(){
 }
 function export_profiles(){var raw=JSON.stringify(profile_store(),null,2);window.prompt('Profil yedeğini kopyalayın:',raw);}
 function import_profiles(){var raw=window.prompt('Daha önce dışa aktardığınız profil JSON verisini yapıştırın:');if(!raw)return;try{var o=JSON.parse(raw);if(!o||typeof o!=='object')throw 0;profile_save_store(o);refresh_profiles();alert('Profiller içe aktarıldı.');}catch(e){alert('Geçersiz profil JSON verisi.');}}
-function router_profile_blob(n){var p=profile_store()[n];if(!p)return '';return 'name='+n+'\nenable='+(p.enable?'1':'0')+'\nstrat='+(p.strat||'fake')+'\nttl='+(p.ttl||2)+'\nports='+(p.ports||'80,443')+'\nmode='+(p.mode||'hostlist')+'\ncustom='+(p.custom||'')+'\nhosts='+(p.hosts||'').replace(/\r?\n/g,'~');}
+function router_profile_blob(n){var p=profile_store()[n];if(!p)return '';return 'name='+n+'\nenable='+(p.enable?'1':'0')+'\nstrat='+(p.strat||'fake')+'\nttl='+(p.ttl||2)+'\nports='+(p.ports||'80,443')+'\nmode='+(p.mode||'hostlist')+'\ncustom='+(p.custom||'')+'\nhosts='+(p.hosts||'').replace(/\r?\n/g,'~')+'\nexclude='+(p.exclude||'').replace(/\r?\n/g,'~');}
 function send_router_profile(){var n=$id('f_profile').value;if(!n){alert('Önce yerel bir profil seçin.');return;}var b=b64url(router_profile_blob(n)),c=[];for(var i=0;i<b.length;i+=100)c.push(b.substr(i,100));var j=0;(function next(){if(j<c.length){fireEv('restart_zp'+(j===0?'R':'A')+c[j],function(){j++;setTimeout(next,300);});}else{fireEv('restart_zpZ',function(){alert('Profil routera kaydedildi: '+n);});}})();}
 function save_schedule(){var n=$id('f_profile').value,s=$id('f_schedule_start').value,e=$id('f_schedule_end').value,d=$id('f_schedule_days').value.replace(/[^1-7]/g,'');if(!n||!s||!e||!d){alert('Profil, başlangıç, bitiş ve günleri doldurun.');return;}fireEv('restart_zs'+b64url('name='+n+'\nstart='+s+'\nend='+e+'\ndays='+d),function(){alert('Zamanlama routera kaydedildi.');});}
 function delete_schedule(){var n=$id('f_profile').value;if(!n){alert('Profil seçin.');return;}fireEv('restart_zs'+b64url('name='+n+'\ndelete=1'),function(){alert('Profil zamanlaması kaldırıldı.');});}
 function host_lines(){return $id('f_hosts').value.replace(/\r/g,'').split('\n');}
+function exclude_lines(){return $id('f_exclude').value.replace(/\r/g,'').split('\n');}
 function clean_hostlist(){var seen={},out=[];host_lines().forEach(function(x){x=x.replace(/^\s+|\s+$/g,'');if(!x||x.charAt(0)==='#')return;var k=x.toLowerCase();if(!seen[k]){seen[k]=1;out.push(x);}});$id('f_hosts').value=out.join('\n');upd_hc();alert(out.length+' geçerli satır korundu; tekrarlar ve boş satırlar temizlendi.');}
+function clean_exclude(){var seen={},out=[];exclude_lines().forEach(function(x){x=x.replace(/^\s+|\s+$/g,'');if(!x||x.charAt(0)==='#')return;var k=x.toLowerCase();if(!seen[k]){seen[k]=1;out.push(x);}});$id('f_exclude').value=out.join('\n');upd_exc();alert(out.length+' geçerli satır korundu; tekrarlar ve boş satırlar temizlendi.');}
 function validate_hostlist(){var bad=[],rx=/^(?=.{1,253}$)([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;host_lines().forEach(function(x,i){x=x.replace(/^\s+|\s+$/g,'');if(x&&x.charAt(0)!=='#'&&!rx.test(x))bad.push((i+1)+': '+x);});alert(bad.length?'Geçersiz satırlar:\n'+bad.slice(0,20).join('\n')+(bad.length>20?'\n...':''):'Hostlist biçimi geçerli.');}
+function validate_exclude(){var bad=[],rx=/^(?=.{1,253}$)([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;exclude_lines().forEach(function(x,i){x=x.replace(/^\s+|\s+$/g,'');if(x&&x.charAt(0)!=='#'&&!rx.test(x))bad.push((i+1)+': '+x);});alert(bad.length?'Geçersiz satırlar:\n'+bad.slice(0,20).join('\n')+(bad.length>20?'\n...':''):'Exclude list biçimi geçerli.');}
 function hostlist_clear(){if(confirm('Hostlist tamamen temizlensin mi?')){$id('f_hosts').value='';upd_hc();}}
+function exclude_clear(){if(confirm('Exclude List tamamen temizlensin mi?')){$id('f_exclude').value='';upd_exc();}}
 function record_live(){try{var h=JSON.parse(localStorage.getItem('zapret_gui_history')||'[]');h.push({t:new Date().toISOString(),q:String(zapret_qcount),r:String(zapret_rules)});while(h.length>20)h.shift();localStorage.setItem('zapret_gui_history',JSON.stringify(h));}catch(e){}}
 function toggle_auto_refresh(){try{localStorage.setItem('zapret_gui_auto_refresh',$id('f_auto_refresh').checked?'1':'0');}catch(e){}if($id('f_auto_refresh').checked)setTimeout(function(){location.reload();},10000);}
 function load_auto_refresh(){try{$id('f_auto_refresh').checked=localStorage.getItem('zapret_gui_auto_refresh')==='1';}catch(e){}record_live();if($id('f_auto_refresh').checked)setTimeout(function(){location.reload();},10000);}
@@ -134,6 +140,12 @@ function upd_hc(){
 	var v=t.value.replace(/\r/g,'').replace(/\n+$/,'');
 	var n=(v?v.split('\n').filter(function(x){return x.replace(/\s/g,'').length>0;}).length:0);
 	$id('hc').textContent='satır: '+n;
+}
+function upd_exc(){
+	var t=$id('f_exclude'); if(!t) return;
+	var v=t.value.replace(/\r/g,'').replace(/\n+$/,'');
+	var n=(v?v.split('\n').filter(function(x){return x.replace(/\s/g,'').length>0;}).length:0);
+	$id('exc_c').textContent='satır: '+n;
 }
 function post_action(script,wait,reloadMs){
 	document.form.action_script.value=script;
@@ -152,10 +164,12 @@ function fireEv(script,cb){ httpApi.nvramSet({"action_mode":"apply","rc_service"
 function save_apply(){
 	if(!confirm('Ayarlar kaydedilip zapret yeniden başlatılsın mı? Başarısız olursa otomatik geri alınır.')) return;
 	var tv=$id('f_hosts').value.replace(/\r/g,'').replace(/\n+$/,'');
+	var ex_tv=$id('f_exclude').value.replace(/\r/g,'').replace(/\n+$/,'');
 	var blob='enable='+($id('f_enable').checked?'1':'0')+'\nstrat='+$id('f_strat').value
 	  +'\nttl='+$id('f_ttl').value+'\nports='+$id('f_ports').value+'\nmode='+$id('f_mode').value
 	  +'\ncustom='+($id('f_custom')?$id('f_custom').value:'')
-	  +'\nhosts='+tv.split('\n').join('~');
+	  +'\nhosts='+tv.split('\n').join('~')
+	  +'\nexclude='+ex_tv.split('\n').join('~');
 	var b=b64url(blob), chunks=[];
 	for(var i=0;i<b.length;i+=100) chunks.push(b.substr(i,100));
 	if(typeof showLoading==='function') showLoading(chunks.length+17);
@@ -374,6 +388,20 @@ function do_install(){
 <input class="zg-btn zg-btn-secondary" onclick="clean_hostlist();" type="button" value="Temizle ve Tekrarları Sil">
 <input class="zg-btn zg-btn-secondary" onclick="validate_hostlist();" type="button" value="Doğrula">
 <input class="zg-btn zg-btn-secondary" onclick="hostlist_clear();" type="button" value="Tümünü Temizle">
+</div>
+</div>
+</div>
+
+<!-- EXCLUDE LIST (textarea content is server-rendered at @@EXCLUDEAREA@@) -->
+<div class="zg-card">
+<div class="zg-card-title">Exclude List</div>
+<div style="padding:12px 14px;">
+@@EXCLUDEAREA@@
+<div class="zg-meta"><span id="exc_c">satır: 0</span><span class="zg-hint">Her satıra bir alan adı. Bu hedefler zapret dışında tutulur.</span></div>
+<div class="zg-actions" style="justify-content:flex-start;margin:12px 0 0;">
+<input class="zg-btn zg-btn-secondary" onclick="clean_exclude();" type="button" value="Temizle ve Tekrarları Sil">
+<input class="zg-btn zg-btn-secondary" onclick="validate_exclude();" type="button" value="Doğrula">
+<input class="zg-btn zg-btn-secondary" onclick="exclude_clear();" type="button" value="Tümünü Temizle">
 </div>
 </div>
 </div>

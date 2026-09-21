@@ -268,7 +268,7 @@ Gen_Status() {
 	    -e "s|@@CUSTOM@@|${custom_now}|g" \
 	    -e "s|@@PAGE@@|${page}|g" \
 	    "$ASP_SRC" \
-	| awk -v hl="$HOSTLIST" '$0=="@@HOSTAREA@@"{print "<textarea id=\"f_hosts\" class=\"zg-hosts\" rows=\"9\" spellcheck=\"false\" oninput=\"upd_hc()\">"; while((getline l < hl)>0){gsub(/&/,"\\&amp;",l); gsub(/</,"\\&lt;",l); gsub(/>/,"\\&gt;",l); print l}; print "</textarea>"; next} {print}' \
+	| awk -v hl="$HOSTLIST" -v ex="$HOSTLIST_EXCLUDE" '$0=="@@HOSTAREA@@"{print "<textarea id=\"f_hosts\" class=\"zg-hosts\" rows=\"9\" spellcheck=\"false\" oninput=\"upd_hc()\">"; while((getline l < hl)>0){gsub(/&/,"\\&amp;",l); gsub(/</,"\\&lt;",l); gsub(/>/,"\\&gt;",l); print l}; print "</textarea>"; next} $0=="@@EXCLUDEAREA@@"{print "<textarea id=\"f_exclude\" class=\"zg-hosts\" rows=\"5\" spellcheck=\"false\" oninput=\"upd_exc()\">"; while((getline l < ex)>0){gsub(/&/,"\\&amp;",l); gsub(/</,"\\&lt;",l); gsub(/>/,"\\&gt;",l); print l}; print "</textarea>"; next} {print}' \
 	    > "/www/user/${page}"
 }
 
@@ -292,7 +292,7 @@ Strat_Line() {  # $1=strategy $2=ttl
 
 ######## apply settings decoded from the event blob ####################
 Apply_Event_Cfg() {
-	local dec en strat ttl ports mode hosts_raw sline p oi custom restart_rc
+	local dec en strat ttl ports mode hosts_raw exclude_raw sline p oi custom restart_rc
 	dec="$(B64URL_D "$1")"
 	[ -z "$dec" ] && { logger -t "$ADDON" "event cfg decode failed"; return 1; }
 	en="$(echo "$dec" | sed -n 's/^enable=//p')"; [ "$en" = "1" ] || en=0
@@ -312,6 +312,7 @@ Apply_Event_Cfg() {
 	# router's own admin session. Hostnames only ever need this charset; '~' is
 	# the wire-format line separator decoded below.
 	hosts_raw="$(echo "$dec" | sed -n 's/^hosts=//p' | tr -cd 'A-Za-z0-9.~-')"
+	exclude_raw="$(echo "$dec" | sed -n 's/^exclude=//p' | tr -cd 'A-Za-z0-9.~-')"
 	[ -f "$ZAPRET_CONF" ] || return 1
 	# Serializes against a second Apply_Event_Cfg (from another GUI submit, or
 	# from Profile_Apply fired by the 30s Scheduler tick) touching the same
@@ -319,6 +320,7 @@ Apply_Event_Cfg() {
 	Lock_Acquire "$LOCK_CONF" 60 || { logger -t "$ADDON" "apply skipped: config lock busy"; return 1; }
 	cp -f "$ZAPRET_CONF" "${ZAPRET_CONF}.bak-gui"
 	[ -f "$HOSTLIST" ] && cp -f "$HOSTLIST" "$HOSTLIST_BAK"
+	[ -f "$HOSTLIST_EXCLUDE" ] && cp -f "$HOSTLIST_EXCLUDE" "${HOSTLIST_EXCLUDE}.bak-gui"
 	sed -i "s/^NFQWS_ENABLE=.*/NFQWS_ENABLE=$en/"         "$ZAPRET_CONF"
 	sed -i "s/^NFQWS_PORTS_TCP=.*/NFQWS_PORTS_TCP=$ports/" "$ZAPRET_CONF"
 	sed -i "s/^MODE_FILTER=.*/MODE_FILTER=$mode/"         "$ZAPRET_CONF"
@@ -351,6 +353,11 @@ Apply_Event_Cfg() {
 	else
 		: > "$HOSTLIST"
 	fi
+	if [ -n "$exclude_raw" ]; then
+		printf '%s\n' "$exclude_raw" | tr '~' '\n' > "$HOSTLIST_EXCLUDE"
+	else
+		: > "$HOSTLIST_EXCLUDE"
+	fi
 	if [ "$en" = "1" ]; then
 		restart_rc=0
 		# 20s cap: a hang (rather than a fast failure) would otherwise block
@@ -363,8 +370,9 @@ Apply_Event_Cfg() {
 		if [ "$restart_rc" -ne 0 ] || ! Nfqws_Matches_Config; then
 			cp -f "${ZAPRET_CONF}.bak-gui" "$ZAPRET_CONF"
 			[ -f "$HOSTLIST_BAK" ] && cp -f "$HOSTLIST_BAK" "$HOSTLIST"
+			[ -f "${HOSTLIST_EXCLUDE}.bak-gui" ] && cp -f "${HOSTLIST_EXCLUDE}.bak-gui" "$HOSTLIST_EXCLUDE"
 			Run_With_Timeout 20 "$ZAPRET_INIT" restart >/dev/null 2>&1
-			logger -t "$ADDON" "apply failed (rc=$restart_rc); rolled back config and hostlist"
+			logger -t "$ADDON" "apply failed (rc=$restart_rc); rolled back config, hostlist and exclude list"
 			Lock_Release "$LOCK_CONF"
 			Gen_Status
 			return 1
