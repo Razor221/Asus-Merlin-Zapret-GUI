@@ -334,8 +334,8 @@ Apply_Event_Cfg() {
 	# pasted "</textarea><script>..." payload was a stored XSS against the
 	# router's own admin session. Hostnames only ever need this charset; '~' is
 	# the wire-format line separator decoded below.
-	hosts_raw="$(echo "$dec" | sed -n 's/^hosts=//p' | tr -cd 'A-Za-z0-9.~-')"
-	exclude_raw="$(echo "$dec" | sed -n 's/^exclude=//p' | tr -cd 'A-Za-z0-9.~-')"
+	hosts_raw="$(echo "$dec" | sed -n 's/^hosts=//p' | tr -cd 'A-Za-z0-9.~_/# -')"
+	exclude_raw="$(echo "$dec" | sed -n 's/^exclude=//p' | tr -cd 'A-Za-z0-9.~_/# -')"
 	[ -f "$ZAPRET_CONF" ] || return 1
 	# Serializes against a second Apply_Event_Cfg (from another GUI submit, or
 	# from Profile_Apply fired by the 30s Scheduler tick) touching the same
@@ -389,10 +389,12 @@ Apply_Event_Cfg() {
 	else
 		: > "$HOSTLIST"
 	fi
-	if [ -n "$exclude_raw" ]; then
-		printf '%s\n' "$exclude_raw" | tr '~' '\n' > "$HOSTLIST_EXCLUDE"
-	else
-		: > "$HOSTLIST_EXCLUDE"
+	if echo "$dec" | grep -q "^exclude="; then
+		if [ -n "$exclude_raw" ]; then
+			printf '%s\n' "$exclude_raw" | tr '~' '\n' > "$HOSTLIST_EXCLUDE"
+		else
+			: > "$HOSTLIST_EXCLUDE"
+		fi
 	fi
 	if [ "$en" = "1" ]; then
 		restart_rc=0
