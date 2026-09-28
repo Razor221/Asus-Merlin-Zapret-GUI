@@ -753,9 +753,9 @@ Do_Update() {
 	
 	curl --version >/dev/null 2>&1 || { logger -t "$ADDON" "GitHub update failed: curl missing"; return 1; }
 
-	if ! curl -fsSL "$repo/zapret-gui.sh"  -o "$sh_tmp"  || \
-	   ! curl -fsSL "$repo/zapret-gui.asp" -o "$asp_tmp" || \
-	   ! curl -fsSL "$repo/zapret_updater.sh" -o "$upd_tmp"; then
+	if ! curl -fsSL "$repo/zapret-gui.sh?t=$ts"  -o "$sh_tmp"  || \
+	   ! curl -fsSL "$repo/zapret-gui.asp?t=$ts" -o "$asp_tmp" || \
+	   ! curl -fsSL "$repo/zapret_updater.sh?t=$ts" -o "$upd_tmp"; then
 		logger -t "$ADDON" "GitHub update failed: download error"; rm -f "$sh_tmp" "$asp_tmp" "$upd_tmp"; return 1
 	fi
 
